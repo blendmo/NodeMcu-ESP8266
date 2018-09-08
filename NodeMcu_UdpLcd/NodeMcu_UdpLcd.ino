@@ -19,6 +19,10 @@ const unsigned int LCD_WIDTH = 20;
 const unsigned int LCD_HEIGHT = 4;
 char packet[255];
 char report[255];
+int pushButtonPin = 13;
+bool backlightOn = false;
+unsigned int startOnTime = 0;
+unsigned int backlightOnTime = 10000;
 LiquidCrystal_I2C  lcd(0x27,2,1,0,4,5,6,7);
 
 //=============================================================================
@@ -28,6 +32,9 @@ void setup()
 {
   Serial.begin(9600);
   Serial.println();
+
+  // setup button as input
+  pinMode(pushButtonPin, INPUT);
   
   Serial.printf("Connecting to %s ", ssid);
   WiFi.begin(ssid, password);
@@ -48,9 +55,12 @@ void setup()
   // activate LCD module
   lcd.begin (LCD_WIDTH, LCD_HEIGHT); // for 16 x 2 LCD module
   lcd.setBacklightPin(3,POSITIVE);
-  lcd.setBacklight(HIGH);
+  lcd.setBacklight(LOW);
 
   lcdPrint(report); 
+
+  // initialize LCD on since reporting the connection info
+  startLcdOn();
 }
 
 //=============================================================================
@@ -72,7 +82,39 @@ void loop()
     
     Serial.printf("UDP packet contents: %s\n", packet);
     lcdPrint(packet); 
+
+    startLcdOn();
   }
+
+  // button is active high
+  if (digitalRead(pushButtonPin) > 0)
+  {
+    startLcdOn();
+  }
+
+  if (backlightOn)
+  {
+    lcd.setBacklight(HIGH);
+
+    if ((millis() - startOnTime) > backlightOnTime)
+    {
+      backlightOn = false;
+    }
+  }
+  else
+  {
+    lcd.setBacklight(LOW);
+  }
+}
+
+//=============================================================================
+// This function applies the operations needed when the timed LCD backlight
+// is turned on.
+//=============================================================================
+void startLcdOn()
+{
+    backlightOn = true;
+    startOnTime = millis();
 }
 
 //=============================================================================
